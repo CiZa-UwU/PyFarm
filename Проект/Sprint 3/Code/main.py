@@ -38,6 +38,7 @@ class Game:
 
 			#состояние геймплея
 			if self.gameplay_runs == True:
+				gameplay_music.set_volume(0.5)
 				gameplay_music.play(-1)
 				dt = self.clock.tick() / 1000
 				self.level.run(dt)
@@ -52,15 +53,16 @@ class Game:
 				# загружаем png-изображения кнопок в переменные
 				start_image = pygame.image.load('buttons/button_start.png').convert_alpha()
 				load_image = pygame.image.load('buttons/button_load.png').convert_alpha()
-				quit_image = pygame.image.load('buttons/button_quit.png').convert_alpha()
+				exit_image = pygame.image.load('buttons/button_exit.png').convert_alpha()
 
 				# создание объектов-кнопок
-				start_button = button.Button(400, 240, start_image)
-				load_button = button.Button(400, 400, load_image)
-				quit_button = button.Button(400, 560, quit_image)
+				start_button = button.Button(451, 217, start_image)
+				load_button = button.Button(451, 302, load_image)
+				exit_button = button.Button(451, 387, exit_image)
 
 				# создание меню и возможных вариантов сценариев нажатия на его кнопки
 				self.screen.blit(menu_background, (0, 0))
+				menu_music.set_volume(0.5)
 				menu_music.play(-1)
 				if start_button.draw(self.screen):
 					menu_music.stop()
@@ -70,7 +72,7 @@ class Game:
 					menu_music.stop()
 					self.menu_runs = False
 					self.gameplay_runs = True
-				if quit_button.draw(self.screen):
+				if exit_button.draw(self.screen):
 					self.menu_runs = False
 					menu_music.stop()
 					pygame.quit()
