@@ -5,9 +5,11 @@ from timer import Timer
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, group):
+    def __init__(self, pos: object, group: object) -> object:
+
         super().__init__(group)
 
+        self.animations = None
         self.import_assets()
         self.status = 'down_idle'
         self.frame_index = 0
@@ -15,6 +17,7 @@ class Player(pygame.sprite.Sprite):
         # general setup
         self.image = self.animations[self.status][self.frame_index]
         self.rect = self.image.get_rect(center=pos)
+        self.z = LAYERS['main']
 
         # movement attributes
         self.direction = pygame.math.Vector2()
@@ -39,12 +42,12 @@ class Player(pygame.sprite.Sprite):
             'seed switch': Timer(200)
         }
 
-    def use_seed(self):
-        pass
-
     def use_tool(self):
         pass
         # print(self.selected_tool)
+
+    def use_seed(self):
+        pass
 
     def import_assets(self):
         self.animations = {'up': [], 'down': [], 'left': [], 'right': [],
@@ -94,7 +97,7 @@ class Player(pygame.sprite.Sprite):
                 self.frame_index = 0
             # change tools
             if keys[pygame.K_q] and not self.timers['tool switch'].active:
-                self.timers['tool switch'].active()
+                self.timers['tool switch'].activate()
                 self.tool_index += 1
                 # if tool index > length of tools => tool index = 0
                 self.tool_index = self.tool_index if self.tool_index < len(self.tools) else 0
@@ -107,7 +110,7 @@ class Player(pygame.sprite.Sprite):
                     self.frame_index = 0
             # change seed part
                 if keys[pygame.K_e] and not self.timers['seed switch'].active:
-                    self.timers['seed switch'].active()
+                    self.timers['seed switch'].activate()
                     self.seed_index += 1
                     # if seed_index > length of tools => seed_index = 0
                     self.seed_index = self.seed_index if self.seed_index < len(self.seeds) else 0
@@ -149,3 +152,5 @@ class Player(pygame.sprite.Sprite):
 
         self.move(dt)
         self.animate(dt)
+  
+      
