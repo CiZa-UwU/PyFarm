@@ -1,15 +1,13 @@
-import pygame
+import pygame, sys
 from settings import *
 from support import *
 from timer import Timer
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, group, collision_sprites, tree_sprites, interaction, soil_layer):
-
+    def __init__(self, pos, group, collision_sprites, tree_sprites, interaction, soil_layer, toggle_shop):
         super().__init__(group)
 
-        self.animations = None
         self.import_assets()
         self.status = 'down_idle'
         self.frame_index = 0
@@ -25,44 +23,60 @@ class Player(pygame.sprite.Sprite):
         self.speed = 200
 
         # collision
-        self.hitbox = self.rect.copy().inflate((-126,-70))
+        self.hitbox = self.rect.copy().inflate((-126, -70))
         self.collision_sprites = collision_sprites
 
-        # tools
+        # timers 
+        self.timers = {
+            'tool use': Timer(350, self.use_tool),
+            'tool switch': Timer(200),
+            'seed use': Timer(350, self.use_seed),
+            'seed switch': Timer(200),
+        }
+
+        # tools 
         self.tools = ['hoe', 'axe', 'water']
         self.tool_index = 0
         self.selected_tool = self.tools[self.tool_index]
 
-        # seeds
+        # seeds 
         self.seeds = ['corn', 'tomato']
         self.seed_index = 0
         self.selected_seed = self.seeds[self.seed_index]
 
-        #inventory
+        # inventory
         self.item_inventory = {
-            'wood': 0,
-            'apple': 0,
-            'corn': 0,
-            'tomato': 0
+            'wood': 20,
+            'apple': 20,
+            'corn': 20,
+            'tomato': 20
         }
+        self.seed_inventory = {
+            'corn': 5,
+            'tomato': 5
+        }
+        self.money = 200
 
         # interaction
         self.tree_sprites = tree_sprites
         self.interaction = interaction
         self.sleep = False
         self.soil_layer = soil_layer
+        self.toggle_shop = toggle_shop
 
-        # timers
-        self.timers = {
-            'tool use': Timer(350, self.use_tool),
-            'tool switch': Timer(200),
-            'seed use': Timer(350, self.use_seed),
-            'seed switch': Timer(200)
-        }
+        # sound
+        self.watering = pygame.mixer.Sound('audio/water.mp3')
+        self.watering.set_volume(0.2)
+
+    def money_quit(self):
+        if self.money > 300:
+            pygame.quit()
+            sys.exit()
 
     def use_tool(self):
         if self.selected_tool == 'hoe':
             self.soil_layer.get_hit(self.target_pos)
+
         if self.selected_tool == 'axe':
             for tree in self.tree_sprites.sprites():
                 if tree.rect.collidepoint(self.target_pos):
@@ -70,21 +84,24 @@ class Player(pygame.sprite.Sprite):
 
         if self.selected_tool == 'water':
             self.soil_layer.water(self.target_pos)
+            self.watering.play()
 
     def get_target_pos(self):
-        self.target_pos =self.rect.center + PLAYER_TOOL_OFFSET[self.status.split('_')[0]]
+
+        self.target_pos = self.rect.center + PLAYER_TOOL_OFFSET[self.status.split('_')[0]]
 
     def use_seed(self):
-        pass
+        if self.seed_inventory[self.selected_seed] > 0:
+            self.soil_layer.plant_seed(self.target_pos, self.selected_seed)
+            self.seed_inventory[self.selected_seed] -= 1
 
     def import_assets(self):
         self.animations = {'up': [], 'down': [], 'left': [], 'right': [],
                            'right_idle': [], 'left_idle': [], 'up_idle': [], 'down_idle': [],
                            'right_hoe': [], 'left_hoe': [], 'up_hoe': [], 'down_hoe': [],
                            'right_axe': [], 'left_axe': [], 'up_axe': [], 'down_axe': [],
-                           'right_water': [], 'left_water': [], 'up_water': [], 'down_water': []
-                           }
-        print(self.animations)
+                           'right_water': [], 'left_water': [], 'up_water': [], 'down_water': []}
+
         for animation in self.animations.keys():
             full_path = 'graphics/character/' + animation
             self.animations[animation] = import_folder(full_path)
@@ -100,8 +117,7 @@ class Player(pygame.sprite.Sprite):
         keys = pygame.key.get_pressed()
 
         if not self.timers['tool use'].active and not self.sleep:
-            # directions
-
+            # directions 
             if keys[pygame.K_UP]:
                 self.direction.y = -1
                 self.status = 'up'
@@ -110,6 +126,7 @@ class Player(pygame.sprite.Sprite):
                 self.status = 'down'
             else:
                 self.direction.y = 0
+
             if keys[pygame.K_RIGHT]:
                 self.direction.x = 1
                 self.status = 'right'
@@ -118,37 +135,38 @@ class Player(pygame.sprite.Sprite):
                 self.status = 'left'
             else:
                 self.direction.x = 0
+
             # tool use
             if keys[pygame.K_SPACE]:
                 self.timers['tool use'].activate()
                 self.direction = pygame.math.Vector2()
                 self.frame_index = 0
-            # change tools
+
+            # change tool
             if keys[pygame.K_q] and not self.timers['tool switch'].active:
                 self.timers['tool switch'].activate()
                 self.tool_index += 1
-                # if tool index > length of tools => tool index = 0
                 self.tool_index = self.tool_index if self.tool_index < len(self.tools) else 0
-                print(self.tool_index)
                 self.selected_tool = self.tools[self.tool_index]
+
             # seed use
-                if keys[pygame.K_LCTRL]:
-                    self.timers['seed use'].activate()
-                    self.direction = pygame.math.Vector2()
-                    self.frame_index = 0
-            # change seed part
-                if keys[pygame.K_e] and not self.timers['seed switch'].active:
-                    self.timers['seed switch'].activate()
-                    self.seed_index += 1
-                    # if seed_index > length of tools => seed_index = 0
-                    self.seed_index = self.seed_index if self.seed_index < len(self.seeds) else 0
-                    print(self.seed_index)
-                    self.selected_seed = self.seeds[self.seed_index]
+            if keys[pygame.K_LCTRL]:
+                self.timers['seed use'].activate()
+                self.direction = pygame.math.Vector2()
+                self.frame_index = 0
+
+            # change seed 
+            if keys[pygame.K_e] and not self.timers['seed switch'].active:
+                self.timers['seed switch'].activate()
+                self.seed_index += 1
+                self.seed_index = self.seed_index if self.seed_index < len(self.seeds) else 0
+                self.selected_seed = self.seeds[self.seed_index]
+
             if keys[pygame.K_RETURN]:
                 collided_interaction_sprite = pygame.sprite.spritecollide(self, self.interaction, False)
                 if collided_interaction_sprite:
                     if collided_interaction_sprite[0].name == 'Trader':
-                        pass
+                        self.toggle_shop()
                     else:
                         self.status = 'left_idle'
                         self.sleep = True
@@ -160,8 +178,8 @@ class Player(pygame.sprite.Sprite):
             self.status = self.status.split('_')[0] + '_idle'
 
         # tool use
-            if self.timers['tool use'].active:
-                self.status = self.status.split('_')[0] + '_' + self.selected_tool
+        if self.timers['tool use'].active:
+            self.status = self.status.split('_')[0] + '_' + self.selected_tool
 
     def update_timers(self):
         for timer in self.timers.values():
@@ -172,24 +190,24 @@ class Player(pygame.sprite.Sprite):
             if hasattr(sprite, 'hitbox'):
                 if sprite.hitbox.colliderect(self.hitbox):
                     if direction == 'horizontal':
-                        if self.direction.x > 0:
+                        if self.direction.x > 0:  # moving right
                             self.hitbox.right = sprite.hitbox.left
-                        if self.direction.x < 0:
+                        if self.direction.x < 0:  # moving left
                             self.hitbox.left = sprite.hitbox.right
                         self.rect.centerx = self.hitbox.centerx
                         self.pos.x = self.hitbox.centerx
 
                     if direction == 'vertical':
-                        if self.direction.y > 0:
+                        if self.direction.y > 0:  # moving down
                             self.hitbox.bottom = sprite.hitbox.top
-                        if self.direction.y < 0:
+                        if self.direction.y < 0:  # moving up
                             self.hitbox.top = sprite.hitbox.bottom
                         self.rect.centery = self.hitbox.centery
                         self.pos.y = self.hitbox.centery
 
     def move(self, dt):
 
-        # normalizing a vector
+        # normalizing a vector 
         if self.direction.magnitude() > 0:
             self.direction = self.direction.normalize()
 
