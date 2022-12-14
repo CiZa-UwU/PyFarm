@@ -14,6 +14,9 @@ class Overlay:
 		self.tools_surf = {tool: pygame.image.load(f'{overlay_path}{tool}.png').convert_alpha() for tool in player.tools}
 		self.seeds_surf = {seed: pygame.image.load(f'{overlay_path}{seed}.png').convert_alpha() for seed in player.seeds}
 
+		# font for printing money
+		self.font = pygame.font.Font('font/LycheeSoda.ttf', 30)
+
 	def display(self):
 
 		# tool
@@ -25,3 +28,10 @@ class Overlay:
 		seed_surf = self.seeds_surf[self.player.selected_seed]
 		seed_rect = seed_surf.get_rect(midbottom = OVERLAY_POSITIONS['seed'])
 		self.display_surface.blit(seed_surf,seed_rect)
+
+		# money
+		text_surf = self.font.render(f'${self.player.money}', False, 'Black')
+		text_rect = text_surf.get_rect(midbottom=(SCREEN_WIDTH / 2, SCREEN_HEIGHT - 20))
+		pygame.draw.rect(self.display_surface, 'White', text_rect.inflate(10, 10), 0, 4)
+		self.display_surface.blit(text_surf, text_rect)
+
